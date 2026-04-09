@@ -47,7 +47,7 @@ do
             end
         end
     end
-    print("u so tuff for using scruli hub ")
+    print("bk's so tuff boi")
 end
 
 local Services = {
@@ -262,7 +262,7 @@ end
 local Controls = getControls()
 
 local function kickPlayer()
-    LocalPlayer:Kick("\ndiscord.gg/scrulihub - xi loves you <3")
+    LocalPlayer:Kick("\ndiscord.gg/lethalhub - xi loves you <3")
 end
 
 local function walkForward(seconds)
@@ -290,54 +290,56 @@ local function instantClone()
     if _G.isCloning then return end
     _G.isCloning = true
 
-    local ok, err = pcall(function()
+    pcall(function()
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not (char and hum) then error("No character") end
+        if not char or not hum then return end
 
-        local cloner =
-            LocalPlayer.Backpack:FindFirstChild("Quantum Cloner")
-            or char:FindFirstChild("Quantum Cloner")
+        -- 🛡️ On vide les mains AVANT de chercher le cloner
+        hum:UnequipTools()
+        task.wait(0.3) -- PAUSE OBLIGATOIRE POUR LA MÉMOIRE
 
-        if not cloner then error("No Quantum Cloner") end
+        local cloner = LocalPlayer.Backpack:FindFirstChild("Quantum Cloner") or char:FindFirstChild("Quantum Cloner")
+        if not cloner then return end
 
-        pcall(function()
-            hum:EquipTool(cloner)
-        end)
-
-        task.wait(0.05)
+        hum:EquipTool(cloner)
+        task.wait(0.3) -- PAUSE OBLIGATOIRE
 
         cloner:Activate()
-        task.wait(0.05)
+        task.wait(0.1)
 
         local cloneName = tostring(LocalPlayer.UserId) .. "_Clone"
-        for _ = 1, 100 do
-            if Workspace:FindFirstChild(cloneName) then break end
+        local found = false
+        for _ = 1, 60 do
+            if Workspace:FindFirstChild(cloneName) then found = true; break end
             task.wait(0.1)
         end
 
-        if not Workspace:FindFirstChild(cloneName) then
-            error("")
+        if not found then 
+            hum:UnequipTools()
+            return 
         end
 
-        local toolsFrames = LocalPlayer.PlayerGui:FindFirstChild("ToolsFrames")
-        local qcFrame = toolsFrames and toolsFrames:FindFirstChild("QuantumCloner")
-        local tpButton = qcFrame and qcFrame:FindFirstChild("TeleportToClone")
-        if not tpButton then error("Teleport button missing") end
+        task.wait(0.4)
 
-        tpButton.Visible = true
-
-        if firesignal then
-            firesignal(tpButton.MouseButton1Up)
-        else
-            local vim = cloneref and cloneref(game:GetService("VirtualInputManager")) or VirtualInputManager
-            local inset = (cloneref and cloneref(game:GetService("GuiService")) or GuiService):GetGuiInset()
-            local pos = tpButton.AbsolutePosition + (tpButton.AbsoluteSize / 2) + inset
-
-            vim:SendMouseButtonEvent(pos.X, pos.Y, 0, true, game, 1)
-            task.wait()
-            vim:SendMouseButtonEvent(pos.X, pos.Y, 0, false, game, 1)
+        local qcFrame = LocalPlayer.PlayerGui:FindFirstChild("ToolsFrames") and LocalPlayer.PlayerGui.ToolsFrames:FindFirstChild("QuantumCloner")
+        local tpBtn = qcFrame and (qcFrame:FindFirstChild("change with clone") or qcFrame:FindFirstChild("TeleportToClone"))
+        
+        if tpBtn then
+            if firesignal then
+                pcall(function() firesignal(tpBtn.MouseButton1Up) end)
+                pcall(function() firesignal(tpBtn.MouseButton1Click) end)
+            elseif getconnections then
+                for _, conn in ipairs(getconnections(tpBtn.MouseButton1Click)) do
+                    if type(conn.Function) == "function" then task.spawn(conn.Function) end
+                end
+            end
         end
+        
+        task.wait(0.3) -- PAUSE AVANT DE RANGER
+        hum:UnequipTools()
+        task.wait(0.2)
+        pcall(function() LocalPlayer.PlayerGui.ToolsFrames.QuantumCloner.Visible = false end)
     end)
 
     _G.isCloning = false
@@ -3816,8 +3818,7 @@ local function runAutoSnipe()
                 local searchName = pName:lower()
                 for _, a in ipairs(cache) do
                     if a and a.name and a.name:lower() == searchName and a.owner ~= LocalPlayer.Name then
-                        bestEntry = a
-                        break
+                        bestEntry = a; break
                     end
                 end
                 if bestEntry then break end
@@ -3825,8 +3826,7 @@ local function runAutoSnipe()
             if not bestEntry then
                 for _, a in ipairs(cache) do
                     if a and a.owner ~= LocalPlayer.Name then
-                        bestEntry = a
-                        break
+                        bestEntry = a; break
                     end
                 end
             end
@@ -3862,9 +3862,13 @@ local function runAutoSnipe()
     local exactPos = targetPart.Position
     local carpetName = Config.TpSettings.Tool
     local carpet = LocalPlayer.Backpack:FindFirstChild(carpetName) or char:FindFirstChild(carpetName)
-    local cloner = LocalPlayer.Backpack:FindFirstChild("Quantum Cloner") or char:FindFirstChild("Quantum Cloner")
 
-    if carpet then hum:EquipTool(carpet) end
+    -- 🛡️ On équipe le tapis AVEC PAUSE
+    if carpet and carpet.Parent ~= char then 
+        hum:EquipTool(carpet) 
+        task.wait(0.3)
+    end
+    
     task.wait(0.01)
     local isSecondFloor = exactPos.Y > 10
     local plotIndex = getClosestBaseIdx(exactPos)
@@ -3914,15 +3918,21 @@ local function runAutoSnipe()
 
     task.wait(0.1)
     hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(bestFace.X, hrp.Position.Y, bestFace.Z))
+    
     if isSecondFloor or not _G._isTargetPlotUnlocked(targetPetData.plot) then
         walkForward(0.4)
         task.wait(0.4)
         instantClone()
-        while _G.isCloning do task.wait() end
+        while _G.isCloning do task.wait(0.1) end
     end
-    task.wait(0.15)
+    
+    task.wait(0.3) -- PAUSE POST-CLONE
 
-    if carpet then hum:EquipTool(carpet) end
+    -- 🛡️ On ré-équipe le tapis AVEC PAUSE
+    if carpet and carpet.Parent ~= char then 
+        hum:EquipTool(carpet) 
+        task.wait(0.3)
+    end
 
     local verticalDiff = targetPart.Position.Y - hrp.Position.Y
 
@@ -6760,9 +6770,9 @@ task.spawn(function()
 
     local title = Instance.new("TextLabel", topBar)
     if privateBuild then
-        title.Text = "SCRULIHUB PRIVATE"
+        title.Text = "LETHALHUB PRIVATE"
     else
-        title.Text = "SCRULIHUB"
+        title.Text = "LETHALHUB"
     end
     title.Font = Enum.Font.GothamBlack
     title.TextSize = 20*SCALE
@@ -6814,7 +6824,7 @@ task.spawn(function()
     if privateBuild then
         author.Text = ""
     else
-        author.Text = "discord.gg/scrulihub"
+        author.Text = "discord.gg/lethalhub"
     end
     author.Font = Enum.Font.GothamBold
     author.TextSize = 12*SCALE
@@ -7972,4 +7982,3 @@ task.spawn(function()
         idBox.Text = ""
     end)
 end)
-

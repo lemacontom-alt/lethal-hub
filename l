@@ -3613,7 +3613,7 @@ local function refreshAdminPanel()
         createAdminRow(p) 
     end
     
-    admScroll.CanvasSize = UDim2.new(0, 0, 0, admLay.AbsoluteContentSize.Y + 10)
+    
 end
 
 task.spawn(function() 
@@ -3804,36 +3804,6 @@ task.spawn(function()
         end
     end
 end)
--- =========================================================
--- 📱 MOBILE FIX : RÉPARATION DU SCROLL TACTILE (FORCE BRUTE)
--- =========================================================
-task.spawn(function()
-    local function applyMobileScrollFix()
-        if not SG then return end
-        
-        for _, obj in ipairs(SG:GetDescendants()) do
-            if obj:IsA("GuiObject") then
-                if obj:IsA("ScrollingFrame") then
-                    obj.Active = true -- Autorise le scroll
-                elseif obj:IsA("TextBox") then
-                    obj.Active = true -- Autorise le clavier pour taper
-                else
-                    obj.Active = false -- DÉSACTIVE LA COLLISION TACTILE POUR TOUT LE RESTE
-                end
-            end
-        end
-    end
-
-    -- On applique la réparation immédiatement
-    applyMobileScrollFix()
-    
-    -- On force la vérification en boucle (toutes les 2 secondes) 
-    -- Comme ça, même quand tu changes d'onglet, le scroll reste fluide !
-    while task.wait(2) do
-        applyMobileScrollFix()
-    end
-end)
-
 -- =========================================================
 -- 🦾 AUTO TP BACK TO BRAINROT (STANDALONE ENGINE)
 -- =========================================================

@@ -763,25 +763,6 @@ if Config.AntiRagdollV2 then _G.startAntiRagdollV2(true) end
 if Config.AntiBeeDisco then _G.ANTI_BEE_DISCO.Enable() end
 
 -- ==========================================
--- NOUVEAU : AUTO DESYNC ON STEAL
--- ==========================================
-task.spawn(function()
-    local Player = game:GetService("Players").LocalPlayer
-    
-    Player:GetAttributeChangedSignal("Stealing"):Connect(function()
-        -- Si l'option n'est pas cochée dans les settings, on ne fait rien
-        if not Config.AutoDesyncOnSteal then return end
-        
-        local isStealing = Player:GetAttribute("Stealing")
-        
-        -- Active le desync si on vole (true), le désactive si on s'arrête (false)
-        if _G.toggleDesyncFunc then
-            MiscState.desyncEnabled = _G.toggleDesyncFunc(isStealing)
-        end
-    end)
-end)
-
--- ==========================================
 local function getControls()
     return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule")):GetControls()
 end
@@ -1011,9 +992,15 @@ runAutoSnipe = function()
         task.wait(0.1)
         hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(bestFace.X, hrp.Position.Y, bestFace.Z))
         
-        if isSecondFloor or not _G._isTargetPlotUnlocked(targetPetData.plot) then 
+if isSecondFloor or not _G._isTargetPlotUnlocked(targetPetData.plot) then 
             walkForward(0.4)
             task.wait(0.4)
+            
+            -- 🛡️ ON ACTIVE LE DESYNC JUSTE AVANT LE CLONE (ET IL RESTE ALLUMÉ)
+            if Config.AutoDesyncOnClone and _G.toggleDesyncFunc then
+                MiscState.desyncEnabled = _G.toggleDesyncFunc(true)
+            end
+            
             instantClone()
             
             while _G.isCloning do task.wait() end 
@@ -1025,6 +1012,11 @@ runAutoSnipe = function()
         
             if not hrp or not hum then return end
             carpet = LocalPlayer.Backpack:FindFirstChild(carpetName) or char:FindFirstChild(carpetName)
+        else
+            -- 🛡️ Si on n'a pas besoin de cloner (Ex: 1er étage), on active le Desync quand même ici
+            if Config.AutoDesyncOnClone and _G.toggleDesyncFunc then
+                MiscState.desyncEnabled = _G.toggleDesyncFunc(true)
+            end
         end
         
         task.wait(0.15)
@@ -2534,15 +2526,9 @@ CreateiOSToggle(pMisc, "Enable Desync", MiscState.desyncEnabled, function(val)
     end
 end)
 
--- NOUVEAU BOUTON : Auto Desync On Steal
-CreateiOSToggle(pMisc, "Auto Desync on Steal", Config.AutoDesyncOnSteal or false, function(val)
-    Config.AutoDesyncOnSteal = val
-    
-    -- Si on décoche le bouton, on s'assure de couper le desync par sécurité
-    if not val and _G.toggleDesyncFunc then
-        MiscState.desyncEnabled = _G.toggleDesyncFunc(false)
-    end
-    
+-- NOUVEAU BOUTON : Auto Desync on Clone
+CreateiOSToggle(pMisc, "Auto Desync on Clone", Config.AutoDesyncOnClone or false, function(val)
+    Config.AutoDesyncOnClone = val
     SaveConfig()
 end)
 

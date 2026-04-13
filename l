@@ -4030,4 +4030,91 @@ task.spawn(function()
 end)
 
 print("scruli hub on top 📈")
+-- ============================================
+--  RAINBOW SCRIPT v3 - LÉGER
+--  Utilise les effets natifs Roblox (pas de boucle sur les parts)
+--  Place dans : StarterPlayerScripts (LocalScript)
+-- ============================================
+
+local RunService = game:GetService("RunService")
+local Lighting   = game:GetService("Lighting")
+local Players    = game:GetService("Players")
+
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ============================================
+--  CONFIG
+-- ============================================
+local SPEED      = 0.05   -- vitesse du cycle (0.03 = lent, 0.1 = rapide)
+local SATURATION = 0.50   -- intensité des couleurs (0 = gris, 1 = vif)
+local BRIGHTNESS = 0.75   -- luminosité
+
+-- ============================================
+--  1. ColorCorrectionEffect dans Lighting
+--     → teinte TOUT le jeu sans toucher aux parts
+-- ============================================
+local colorFX = Instance.new("ColorCorrectionEffect")
+colorFX.Enabled    = true
+colorFX.Brightness = 0
+colorFX.Contrast   = 0
+colorFX.Saturation = 0
+colorFX.TintColor  = Color3.new(1, 1, 1)
+colorFX.Parent     = Lighting
+
+-- ============================================
+--  2. Overlay GUI arc-en-ciel très transparent
+--     → donne l'effet rainbow aux GUI sans les cacher
+-- ============================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name            = "RainbowOverlay"
+screenGui.ResetOnSpawn    = false
+screenGui.IgnoreGuiInset  = true
+screenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+screenGui.Parent          = playerGui
+
+local overlay = Instance.new("Frame")
+overlay.Size                  = UDim2.fromScale(1, 1)
+overlay.Position              = UDim2.fromOffset(0, 0)
+overlay.BackgroundColor3      = Color3.new(1, 0, 0)
+overlay.BackgroundTransparency = 0.82   -- très transparent, juste une légère teinte
+overlay.BorderSizePixel       = 0
+overlay.ZIndex                = 1       -- derrière tous les vrais GUI
+overlay.Parent                = screenGui
+
+-- ============================================
+--  3. Boucle principale (ultra légère : 3 objets seulement)
+-- ============================================
+local t = 0
+
+RunService.RenderStepped:Connect(function(dt)
+    t = t + dt * SPEED
+
+    local h = t % 1
+    local rainbowColor = Color3.fromHSV(h, SATURATION, BRIGHTNESS)
+
+    -- Teinte globale du jeu via ColorCorrection
+    colorFX.TintColor = Color3.fromHSV(
+        h,
+        SATURATION * 0.4,   -- subtil pour ne pas déformer les textures
+        1
+    )
+
+    -- Lumière ambiante (change la couleur des ombres et de l'ambiance)
+    Lighting.Ambient = Color3.fromHSV(
+        (h + 0.1) % 1,
+        SATURATION * 0.45,
+        BRIGHTNESS * 0.5
+    )
+    Lighting.OutdoorAmbient = Color3.fromHSV(
+        (h + 0.2) % 1,
+        SATURATION * 0.4,
+        BRIGHTNESS * 0.55
+    )
+
+    -- Overlay GUI
+    overlay.BackgroundColor3 = rainbowColor
+end)
+
+print("[Rainbow v3] Actif - aucun lag, effets natifs Roblox")
 

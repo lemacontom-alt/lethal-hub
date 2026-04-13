@@ -763,16 +763,24 @@ if Config.AntiRagdollV2 then _G.startAntiRagdollV2(true) end
 if Config.AntiBeeDisco then _G.ANTI_BEE_DISCO.Enable() end
 
 -- ==========================================
--- NOUVEAU : AUTO DESYNC ON LOAD
+-- NOUVEAU : AUTO DESYNC ON STEAL
 -- ==========================================
-if Config.AutoDesyncOnLoad then
-    task.spawn(function()
-        task.wait(2) -- On attend 2 secondes que le personnage et RakNet soient bien chargés
+task.spawn(function()
+    local Player = game:GetService("Players").LocalPlayer
+    
+    Player:GetAttributeChangedSignal("Stealing"):Connect(function()
+        -- Si l'option n'est pas cochée dans les settings, on ne fait rien
+        if not Config.AutoDesyncOnSteal then return end
+        
+        local isStealing = Player:GetAttribute("Stealing")
+        
+        -- Active le desync si on vole (true), le désactive si on s'arrête (false)
         if _G.toggleDesyncFunc then
-            MiscState.desyncEnabled = _G.toggleDesyncFunc(true)
+            MiscState.desyncEnabled = _G.toggleDesyncFunc(isStealing)
         end
     end)
-end
+end)
+
 -- ==========================================
 local function getControls()
     return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule")):GetControls()
@@ -1976,7 +1984,7 @@ local titleLbl = Instance.new("TextLabel", hudFrame)
 titleLbl.Size = UDim2.new(0, 200, 1, 0)
 titleLbl.Position = UDim2.new(0, 65, 0, 0)
 titleLbl.BackgroundTransparency = 1
-titleLbl.Text = "SCRULI HUB V3"
+titleLbl.Text = "SCRULI HUB(gyat_boxedd) V3"
 titleLbl.Font = Enum.Font.GothamBlack
 titleLbl.TextSize = 16
 titleLbl.TextColor3 = Theme.White
@@ -2046,7 +2054,7 @@ local setTit = Instance.new("TextLabel", setTop)
 setTit.Size = UDim2.new(1,0,0,30)
 setTit.Position = UDim2.new(0,25,0,10)
 setTit.BackgroundTransparency = 1
-setTit.Text = "SCRULI HUB V3 - SETTINGS"
+setTit.Text = "SCRULI HUB DEV SIDE V3 - SETTINGS"
 setTit.Font = Enum.Font.GothamBlack
 setTit.TextColor3 = Theme.White
 setTit.TextSize = 16
@@ -2116,7 +2124,7 @@ local function CreateSetPage(name, isFirst, order)
     page.AutomaticCanvasSize = Enum.AutomaticSize.Y -- NOUVEAU
     page.CanvasSize = UDim2.new(0, 0, 0, 0) -- NOUVEAU
     
-    btn.MouseButton1Click:Connect(function()
+btn.MouseButton1Click:Connect(function()
         for _, c in ipairs(tabScroll:GetChildren()) do 
             if c:IsA("TextButton") then 
                 c.BackgroundColor3 = Theme.Volcanic
@@ -2131,7 +2139,10 @@ local function CreateSetPage(name, isFirst, order)
         page.Visible = true
     end)
     
--- ... (le reste du code de la fonction au dessus) ...
+    -- 👉 REMET CES 3 LIGNES ICI POUR RANGER LES BOUTONS :
+    local pLay = Instance.new("UIListLayout", page)
+    pLay.Padding = UDim.new(0, 6)
+    pLay.SortOrder = Enum.SortOrder.LayoutOrder
 
     return page
 end
@@ -2522,11 +2533,19 @@ CreateiOSToggle(pMisc, "Enable Desync", MiscState.desyncEnabled, function(val)
         MiscState.desyncEnabled = _G.toggleDesyncFunc(val)
     end
 end)
--- NOUVEAU BOUTON : Auto Desync
-CreateiOSToggle(pMisc, "Auto Desync on Load", Config.AutoDesyncOnLoad or false, function(val)
-    Config.AutoDesyncOnLoad = val
+
+-- NOUVEAU BOUTON : Auto Desync On Steal
+CreateiOSToggle(pMisc, "Auto Desync on Steal", Config.AutoDesyncOnSteal or false, function(val)
+    Config.AutoDesyncOnSteal = val
+    
+    -- Si on décoche le bouton, on s'assure de couper le desync par sécurité
+    if not val and _G.toggleDesyncFunc then
+        MiscState.desyncEnabled = _G.toggleDesyncFunc(false)
+    end
+    
     SaveConfig()
 end)
+
 -- FIN NOUVEAU BOUTON
 CreateiOSToggle(pMisc, "Show Server Pos", MiscState.serverPosEnabled, function(val)
     MiscState.serverPosEnabled = val
@@ -3807,61 +3826,222 @@ end)
 -- =========================================================
 -- 🦾 AUTO TP BACK TO BRAINROT (STANDALONE ENGINE)
 -- =========================================================
+
 task.spawn(function()
-    local lastRagdollTime = 0
-    
-    local function setupAutoTpBack(char)
-        local hum = char:WaitForChild("Humanoid", 5)
-        local hrp = char:WaitForChild("HumanoidRootPart", 5)
-        if not hum or not hrp then return end
+    local Player = game:GetService("Players").LocalPlayer
+
+    Player:GetAttributeChangedSignal("Stealing"):Connect(function()
+        local isStealing = Player:GetAttribute("Stealing")
         
-        hum.StateChanged:Connect(function(oldState, newState)
-            -- On vérifie si l'option est activée et si on a bien une cible en cours
+        if not isStealing then
             if not Config.AutoTpOnFailedSteal then return end
             if not SharedState.SelectedPetData then return end
-            if State.isTpMoving then return end -- On ignore si on est déjà en train de se TP via runAutoSnipe
-            
-            -- Si on détecte qu'on tombe ou qu'on se fait ragdoll (coup de batte, tourelle)
-            if newState == Enum.HumanoidStateType.Ragdoll or newState == Enum.HumanoidStateType.FallingDown or newState == Enum.HumanoidStateType.Physics then
-                
-                local now = tick()
-                if now - lastRagdollTime < 0.5 then return end -- Cooldown pour éviter le spam
-                lastRagdollTime = now
-                
-                task.spawn(function()
-                    task.wait(0.15) -- On attend une fraction de seconde pour laisser ton propre Anti-Ragdoll agir
-                    
-                    local plotObj = Workspace.Plots:FindFirstChild(SharedState.SelectedPetData.plot)
-                    if plotObj and plotObj:FindFirstChild("AnimalPodiums") then
-                        local pod = plotObj.AnimalPodiums:FindFirstChild(SharedState.SelectedPetData.slot)
-                        local base = pod and pod:FindFirstChild("Base")
-                        local targetPart = base and (base:FindFirstChild("Spawn") or base)
+            if State.isTpMoving then return end
+
+            local char = Player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            task.spawn(function()
+                -- ⏳ LE CHANGEMENT EST ICI : On attend 1 seconde complète
+                task.wait(1) 
+
+                local plotObj = Workspace.Plots:FindFirstChild(SharedState.SelectedPetData.plot)
+                if plotObj and plotObj:FindFirstChild("AnimalPodiums") then
+                    local pod = plotObj.AnimalPodiums:FindFirstChild(SharedState.SelectedPetData.slot)
+                    local base = pod and pod:FindFirstChild("Base")
+                    local targetPart = base and (base:FindFirstChild("Spawn") or base)
+
+                    if targetPart and hrp and hrp.Parent then
+                        -- TON CODE DE TP
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        if targetPart and hrp and hrp.Parent then
-                            -- 1. Arrête la vitesse de l'éjection pour ne pas glisser
-                            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                            
-                            -- 2. Si on a été éjecté pas trop loin (< 150 studs), on se re-téléporte instantanément
-                            if (hrp.Position - targetPart.Position).Magnitude < 150 then
-                                hrp.CFrame = CFrame.new(targetPart.Position)
-                            else
-                                -- 3. Si on s'est fait envoyer super loin, on relance le processus de TP complet
-                                if runAutoSnipe then pcall(runAutoSnipe) end
-                            end
+                        if (hrp.Position - targetPart.Position).Magnitude < 150 then
+                            hrp.CFrame = CFrame.new(targetPart.Position)
+                        else
+                            if runAutoSnipe then pcall(runAutoSnipe) end
                         end
                     end
-                end)
+                end
+            end)
+        end
+    end)
+end)
+
+-- =========================================================
+-- 🐉 SERVER POSITION VISUALIZER (DRAGON DE FEU RÉALISTE)
+-- =========================================================
+task.spawn(function()
+    local Player = game:GetService("Players").LocalPlayer
+    local RunService = game:GetService("RunService")
+    
+    local GhostModel = nil
+    local DragonParts = {}
+    local serverPosConnection = nil
+
+    local function createDragon()
+        if GhostModel then GhostModel:Destroy() end
+        
+        GhostModel = Instance.new("Model")
+        GhostModel.Name = "Scruli_ServerDragon"
+        GhostModel.Parent = workspace
+        DragonParts = {}
+        
+        -- Outil pour fabriquer les morceaux du dragon
+        local function makePart(size, isNeon)
+            local p = Instance.new("Part")
+            p.Size = size
+            p.Anchored = true
+            p.CanCollide = false
+            -- Matériel hyper réaliste : Lave craquelée pour le corps, Néon pour les ailes
+            p.Material = isNeon and Enum.Material.Neon or Enum.Material.CrackedLava
+            p.Color = Color3.fromRGB(255, 80, 0)
+            p.Parent = GhostModel
+            return p
+        end
+
+        -- 🧱 Assemblage du corps du Dragon
+        DragonParts.Body = makePart(Vector3.new(1.5, 1.5, 3), false)
+        DragonParts.Head = makePart(Vector3.new(1, 1, 1.5), false)
+        DragonParts.Tail = makePart(Vector3.new(0.5, 0.5, 2.5), false)
+        DragonParts.WingL = makePart(Vector3.new(3, 0.1, 2), true)
+        DragonParts.WingR = makePart(Vector3.new(3, 0.1, 2), true)
+
+        -- 🔥 VRAI FEU ROBLOX 3D
+        local realFire = Instance.new("Fire", DragonParts.Body)
+        realFire.Size = 9
+        realFire.Heat = 15
+        realFire.Color = Color3.fromRGB(255, 100, 0)
+        realFire.SecondaryColor = Color3.fromRGB(255, 0, 0)
+
+        -- ✨ PARTICULES DE BRAISES (Étincelles de feu)
+        local embers = Instance.new("ParticleEmitter", DragonParts.Body)
+        embers.Texture = "rbxassetid://243660364"
+        embers.Rate = 50
+        embers.Speed = NumberRange.new(2, 5)
+        embers.Lifetime = NumberRange.new(1, 2)
+        embers.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0)})
+        embers.LightEmission = 1
+        embers.Color = ColorSequence.new(Color3.fromRGB(255, 200, 50))
+        embers.Acceleration = Vector3.new(0, 5, 0)
+
+        -- 💡 LUMIÈRE DYNAMIQUE (Fait briller les murs et le sol)
+        local light = Instance.new("PointLight", DragonParts.Body)
+        light.Color = Color3.fromRGB(255, 100, 0)
+        light.Range = 15
+        light.Brightness = 4
+        light.Shadows = true -- Ombres hyper réalistes
+
+        -- 📝 Texte HUD au-dessus
+        local bg = Instance.new("BillboardGui", DragonParts.Body)
+        bg.Size = UDim2.new(0, 200, 0, 20)
+        bg.StudsOffset = Vector3.new(0, 5, 0)
+        bg.AlwaysOnTop = true
+        
+        local txt = Instance.new("TextLabel", bg)
+        txt.Name = "Title"
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Font = Enum.Font.GothamBlack
+        txt.TextSize = 14
+        txt.Text = "SERVER POS"
+        txt.TextColor3 = Color3.fromRGB(255, 100, 0)
+        txt.TextStrokeTransparency = 0 -- Contour noir pour bien lire
+    end
+
+    _G.toggleServerPosFunc = function(state)
+        if serverPosConnection then serverPosConnection:Disconnect(); serverPosConnection = nil end
+        if GhostModel then GhostModel:Destroy(); GhostModel = nil end
+        
+        if state then
+            createDragon()
+            
+            local lastClientPos = Vector3.new(0, 0, 0)
+            local simulatedServerCFrame = CFrame.new()
+            
+            local char = Player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                lastClientPos = char.HumanoidRootPart.Position
+                simulatedServerCFrame = char.HumanoidRootPart.CFrame
             end
-        end)
+
+            serverPosConnection = RunService.Heartbeat:Connect(function()
+                char = Player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+                
+                if not GhostModel or not GhostModel.Parent then createDragon() end
+                
+                local currentClientPos = hrp.Position
+                local delta = (currentClientPos - lastClientPos).Magnitude
+                
+                local isTping = false
+                pcall(function() isTping = State.isTpMoving end)
+                
+                if delta > 10 and not isTping then
+                    simulatedServerCFrame = hrp.CFrame
+                end
+                
+                local isDesynced = false
+                pcall(function() isDesynced = MiscState.desyncEnabled end)
+                
+                local targetColor
+                local targetFireColor
+                local txt = DragonParts.Body:FindFirstChildOfClass("BillboardGui") and DragonParts.Body.BillboardGui:FindFirstChild("Title")
+                local realFire = DragonParts.Body:FindFirstChildOfClass("Fire")
+                local light = DragonParts.Body:FindFirstChildOfClass("PointLight")
+
+                if not isDesynced then
+                    -- 🔵 FLAMMES BLEUES (SYNC)
+                    simulatedServerCFrame = hrp.CFrame
+                    targetColor = Color3.fromRGB(50, 140, 255)
+                    targetFireColor = Color3.fromRGB(0, 200, 255)
+                    if txt then txt.Text = "🔵 SERVER POS(SYNC)"; txt.TextColor3 = targetColor end
+                else
+                    -- 🔴 MAGMA ROUGE (DESYNCED)
+                    targetColor = Color3.fromRGB(255, 60, 0)
+                    targetFireColor = Color3.fromRGB(255, 0, 0)
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterDescendantsInstances = {char, GhostModel}
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    
+                    local ray = workspace:Raycast(simulatedServerCFrame.Position, Vector3.new(0, -10, 0), raycastParams)
+                    if ray then
+                        simulatedServerCFrame = CFrame.new(simulatedServerCFrame.X, ray.Position.Y + 2.5, simulatedServerCFrame.Z)
+                    end
+                    if txt then txt.Text = "🔴 SERVER POS(DESYNCED)"; txt.TextColor3 = targetColor end
+                end
+
+                -- Changement des couleurs en temps réel
+                for name, part in pairs(DragonParts) do
+                    part.Color = (name == "WingL" or name == "WingR") and targetFireColor or targetColor
+                end
+                if realFire then
+                    realFire.Color = targetColor
+                    realFire.SecondaryColor = targetFireColor
+                end
+                if light then light.Color = targetColor end
+
+                -- ===============================================
+                -- 🐉 ANIMATION DES AILES ET DU CORPS
+                -- ===============================================
+                local t = tick()
+                local floatOffset = math.sin(t * 3) * 0.8
+                local flapAngle = math.sin(t * 15) * 0.8
+
+                local baseCFrame = simulatedServerCFrame * CFrame.new(0, floatOffset, 0)
+
+                DragonParts.Body.CFrame = baseCFrame
+                DragonParts.Head.CFrame = baseCFrame * CFrame.new(0, 0.3, -2) * CFrame.Angles(math.rad(-10 + math.sin(t)*5), 0, 0)
+                DragonParts.Tail.CFrame = baseCFrame * CFrame.new(0, -0.3, 2.5) * CFrame.Angles(math.rad(20 + math.sin(t*2)*10), 0, 0)
+                DragonParts.WingL.CFrame = baseCFrame * CFrame.new(-2.2, 0.5, 0) * CFrame.Angles(0, 0, flapAngle)
+                DragonParts.WingR.CFrame = baseCFrame * CFrame.new(2.2, 0.5, 0) * CFrame.Angles(0, 0, -flapAngle)
+                
+                lastClientPos = currentClientPos
+            end)
+        end
     end
-    
-    -- On l'attache au personnage actuel
-    if LocalPlayer.Character then
-        setupAutoTpBack(LocalPlayer.Character)
-    end
-    
-    -- On s'assure qu'il se réattache si tu meurs/reset
-    LocalPlayer.CharacterAdded:Connect(setupAutoTpBack)
 end)
 
 print("scruli hub on top 📈")
+

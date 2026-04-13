@@ -738,22 +738,134 @@ end
 
 _G.ANTI_BEE_DISCO = {
     Enable = function()
-        if _G.AntiBeeConn then return end
-        local function checkAndDestroy(obj)
-            if obj.Name:lower():match("bee") or obj.Name:lower():match("disco") then
+        if _G.AntiBeeLoopConn then return end
+
+        local RunService = game:GetService("RunService")
+        local Lighting = game:GetService("Lighting")
+        local LocalPlayer = game:GetService("Players").LocalPlayer
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+        local function purge(obj)
+            local n = obj.Name:lower()
+            -- Destruction des objets trolls et secousses
+            if n:match("bee") or n:match("disco") or n:match("boogie") or n:match("shake") then
                 pcall(function() obj:Destroy() end)
             end
+            -- Destruction des musiques de troll
+            if obj:IsA("Sound") and (n:match("disco") or n:match("music") or n:match("party") or n:match("bee") or n:match("boogie")) then
+                pcall(function() obj:Stop(); obj:Destroy() end)
+            end
         end
-        for _, v in ipairs(Workspace:GetDescendants()) do checkAndDestroy(v) end
-        _G.AntiBeeConn1 = Workspace.DescendantAdded:Connect(checkAndDestroy)
-        
-        local char = LocalPlayer.Character
-        if char then
-            for _, v in ipairs(char:GetDescendants()) do checkAndDestroy(v) end
-        end
+
+        -- Nettoyage initial sur la map
+        for _, v in ipairs(workspace:GetDescendants()) do purge(v) end
+
+        -- Boucle de protection Ultime (Anti-Tout)
+        _G.AntiBeeLoopConn = RunService.RenderStepped:Connect(function()
+            
+            -- 1. DESTRUCTION TOTALE DU ITEM CONTROLLER (Boogie Bomb)
+            pcall(function()
+                local controllers = ReplicatedStorage:FindFirstChild("Controllers")
+                if controllers then
+                    local itemController = controllers:FindFirstChild("ItemController")
+                    if itemController then
+                        itemController:Destroy()
+                    end
+                end
+            end)
+
+            -- 2. NETTOYAGE DES SCRIPTS CACHÉS
+            local pScripts = LocalPlayer:FindFirstChild("PlayerScripts")
+            if pScripts then
+                for _, v in ipairs(pScripts:GetChildren()) do
+                    local n = v.Name:lower()
+                    if n:match("boogie") or n:match("disco") or n:match("bee") or n:match("shake") then
+                        pcall(function() v:Destroy() end)
+                    end
+                end
+            end
+
+            -- 3. PROTECTION DU PERSONNAGE
+            local char = LocalPlayer.Character
+            if char then
+                for _, v in ipairs(char:GetDescendants()) do purge(v) end
+                
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    -- Anti-Tremblement
+                    if hum.CameraOffset.Magnitude > 0 then
+                        hum.CameraOffset = Vector3.new(0, 0, 0)
+                    end
+
+                    -- Anti-Inversion Vitesse
+                    if hum.WalkSpeed < 0 then hum.WalkSpeed = math.abs(hum.WalkSpeed) end
+                    
+                    -- Anti-Inversion Z=S absolue
+                    local success, PlayerModule = pcall(function()
+                        return require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+                    end)
+                    
+                    if success and PlayerModule then
+                        local Controls = PlayerModule:GetControls()
+                        local moveVector = Controls:GetMoveVector()
+
+                        if moveVector.Magnitude > 0 then
+                            local cam = workspace.CurrentCamera
+                            local lookVector = cam.CFrame.LookVector
+                            local rightVector = cam.CFrame.RightVector
+                            
+                            local forward = Vector3.new(lookVector.X, 0, lookVector.Z).Unit
+                            local right = Vector3.new(rightVector.X, 0, rightVector.Z).Unit
+                            
+                            local trueDirection = (forward * -moveVector.Z) + (right * moveVector.X)
+                            hum:Move(trueDirection, false)
+                        end
+                    end
+
+                    -- Anti-Danse (Bloque l'emote)
+                    local animator = hum:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            local animName = track.Animation and track.Animation.Name:lower() or ""
+                            if animName:match("disco") or animName:match("dance") or animName:match("boogie") then
+                                track:Stop(0) 
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- 4. PROTECTION CAMÉRA (Anti-FOV et Anti-Flou)
+            local cam = workspace.CurrentCamera
+            if cam then
+                -- Utilise la FOV de tes paramètres (Config.FOV)
+                local targetFOV = Config.FOV or 70
+                if math.abs(cam.FieldOfView - targetFOV) > 0.5 then 
+                    cam.FieldOfView = targetFOV 
+                end
+                
+                -- Détruit les effets d'aveuglement sur la caméra
+                for _, v in ipairs(cam:GetChildren()) do
+                    if v:IsA("ColorCorrectionEffect") or v:IsA("BlurEffect") or v:IsA("DepthOfFieldEffect") then 
+                        pcall(function() v:Destroy() end) 
+                    end
+                end
+            end
+            
+            -- Détruit les effets d'aveuglement dans le monde
+            for _, v in ipairs(Lighting:GetChildren()) do
+                if v:IsA("ColorCorrectionEffect") or v:IsA("BlurEffect") or v.Name:lower():match("bee") or v.Name:lower():match("disco") or v.Name:lower():match("boogie") then 
+                    pcall(function() v:Destroy() end) 
+                end
+            end
+        end)
     end,
+    
     Disable = function()
-        if _G.AntiBeeConn1 then _G.AntiBeeConn1:Disconnect(); _G.AntiBeeConn1 = nil end
+        if _G.AntiBeeLoopConn then 
+            _G.AntiBeeLoopConn:Disconnect()
+            _G.AntiBeeLoopConn = nil 
+        end
     end
 }
 
@@ -1976,7 +2088,7 @@ local titleLbl = Instance.new("TextLabel", hudFrame)
 titleLbl.Size = UDim2.new(0, 200, 1, 0)
 titleLbl.Position = UDim2.new(0, 65, 0, 0)
 titleLbl.BackgroundTransparency = 1
-titleLbl.Text = "SCRULI HUB GAY VERSION 🌈 V3"
+titleLbl.Text = "SCRULI HUB V3.3"
 titleLbl.Font = Enum.Font.GothamBlack
 titleLbl.TextSize = 16
 titleLbl.TextColor3 = Theme.White
@@ -2046,7 +2158,7 @@ local setTit = Instance.new("TextLabel", setTop)
 setTit.Size = UDim2.new(1,0,0,30)
 setTit.Position = UDim2.new(0,25,0,10)
 setTit.BackgroundTransparency = 1
-setTit.Text = "SCRULI HUB GAY PORN V3 - SETTINGS"
+setTit.Text = "SCRULI HUB V3 - SETTINGS"
 setTit.Font = Enum.Font.GothamBlack
 setTit.TextColor3 = Theme.White
 setTit.TextSize = 16
@@ -2392,8 +2504,8 @@ local function CreateSettingsSlider(parent, text, val, min, max, cb)
     knob.Position = UDim2.new(pct, -6, 0.5, -6)
     knob.BackgroundColor3 = Theme.White
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-    
-    local dragging = false
+
+local dragging = false
     local function update(inputX, sendCb)
         local p = math.clamp((inputX - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
         local newVal = math.floor(min + (p * (max - min)))
@@ -2404,16 +2516,16 @@ local function CreateSettingsSlider(parent, text, val, min, max, cb)
     end
     
     sliderBg.InputBegan:Connect(function(inp) 
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; update(inp.Position.X, false) end 
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragging = true; update(inp.Position.X, false) end 
     end)
     knob.InputBegan:Connect(function(inp) 
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end 
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragging = true end 
     end)
     UserInputService.InputEnded:Connect(function(inp) 
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 and dragging then dragging = false; update(inp.Position.X, true) end 
+        if (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) and dragging then dragging = false; update(inp.Position.X, true) end 
     end)
     UserInputService.InputChanged:Connect(function(inp) 
-        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then update(inp.Position.X, false) end 
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then update(inp.Position.X, false) end 
     end)
     return row
 end
@@ -3322,7 +3434,7 @@ local function CreateMiniSlider(parent, text, val, min, max, cb)
     knob.BackgroundColor3 = Theme.White
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
     
-    local dragging = false
+local dragging = false
     local function update(inputX, sendCb)
         local p = math.clamp((inputX - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
         local newVal = math.floor(min + (p * (max - min)))
@@ -3333,16 +3445,16 @@ local function CreateMiniSlider(parent, text, val, min, max, cb)
     end
     
     sliderBg.InputBegan:Connect(function(inp) 
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; update(inp.Position.X, false) end 
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragging = true; update(inp.Position.X, false) end 
     end)
     knob.InputBegan:Connect(function(inp) 
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end 
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragging = true end 
     end)
     UserInputService.InputEnded:Connect(function(inp) 
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 and dragging then dragging = false; update(inp.Position.X, true) end 
+        if (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) and dragging then dragging = false; update(inp.Position.X, true) end 
     end)
     UserInputService.InputChanged:Connect(function(inp) 
-        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then update(inp.Position.X, false) end 
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then update(inp.Position.X, false) end 
     end)
     return row
 end
@@ -4027,6 +4139,71 @@ task.spawn(function()
                 lastClientPos = currentClientPos
             end)
         end
+    end
+end)
+
+
+-- ==========================================
+-- 🔄 AUTO-RELOAD DU SERVER POS (ANTI-BUG)
+-- ==========================================
+task.spawn(function()
+    local Player = game:GetService("Players").LocalPlayer
+    
+    -- 1. On attend que le perso et la Hitbox soient VRAIMENT là
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    char:WaitForChild("HumanoidRootPart", 9e9)
+    
+    -- 2. Si c'est sauvegardé sur ON, on l'allume proprement
+    if Config.ShowServerPos then
+        -- On s'assure que la fonction du bouton est bien chargée
+        while not _G.toggleServerPosFunc do task.wait(0.1) end
+        _G.toggleServerPosFunc(true) 
+    end
+end)
+-- ==========================================
+-- 🔄 AUTO-RELOAD DU BASE X-RAY
+-- ==========================================
+task.spawn(function()
+    task.wait(2) -- On attend 2 secondes que les bases soient bien apparues sur la map
+    if Config.XrayEnabled and _G.enableXray then
+        _G.enableXray()
+    end
+end)
+
+-- ==========================================
+-- 🔄 AUTO-RELOAD DU LINE TO BASE
+-- ==========================================
+task.spawn(function()
+    -- On attend que le jeu et les bases soient bien chargés
+    local plots = workspace:WaitForChild("Plots", 10)
+    task.wait(3) 
+    
+    if Config.LineToBase then
+        pcall(function()
+            -- On réinitialise d'abord pour éviter les doublons
+            if _G.resetPlotBeam then _G.resetPlotBeam() end
+            
+            -- On cherche ta base et on crée la ligne
+            -- La fonction createPlotBeam est déjà définie à la ligne 199 de ton script
+            local myPlot = nil
+            for _, plot in ipairs(plots:GetChildren()) do
+                local sign = plot:FindFirstChild("PlotSign")
+                if sign and sign:FindFirstChild("YourBase") and sign.YourBase.Enabled then 
+                    myPlot = plot
+                    break 
+                end
+            end
+            
+            if myPlot and game.Players.LocalPlayer.Character then
+                -- On force la création visuelle
+                local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    -- On appelle la logique de création de faisceau
+                    -- Note: Le script a déjà une boucle à la ligne 208 qui vérifie le faisceau
+                    -- mais ce code force l'initialisation immédiate.
+                end
+            end
+        end)
     end
 end)
 

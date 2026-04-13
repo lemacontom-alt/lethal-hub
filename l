@@ -2260,7 +2260,7 @@ local function CreateiOSToggle(parent, text, state, cb)
         if not skipCallback and cb then cb(state) end
     end
 
-    btn.MouseButton1Click:Connect(function() UpdateState(not state, false) end)
+  btn.Activated:Connect(function() UpdateState(not state, false) end)
     return {Row = row, Update = UpdateState}
 end
 
@@ -2890,8 +2890,8 @@ local function CreatePill(parent, text, state, cb)
         end 
     end
     
-    upd(state)
-    b.MouseButton1Click:Connect(function() 
+upd(state)
+    b.Activated:Connect(function() 
         upd(not state)
         if cb then cb(state) end
         SaveConfig() 

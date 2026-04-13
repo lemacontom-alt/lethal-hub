@@ -1,7 +1,7 @@
 -- ==========================================================
 -- 🔥 SCRULI HUB AMBER V69 (ESP, ADMIN, 3D FRONT & MISC) 🔥
 -- ==========================================================
-if not game:IsLoaded() then 
+if not game:IsLoaded() then
     game.Loaded:Wait() 
 end
 

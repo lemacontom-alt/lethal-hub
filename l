@@ -111,7 +111,7 @@ local SharedState = {
 local State = { isTpMoving = false }
 local MiscState = { carpetSpeedEnabled = false, desyncEnabled = false, serverPosEnabled = false }
 
-local saveFile = "ScruliAmber_ConfigV69.json"
+local saveFile = "ScruliAmber_ConfigMobile.txt"
 local RefreshActionLabels
 local updateTargetListUI
 
@@ -1976,7 +1976,7 @@ local titleLbl = Instance.new("TextLabel", hudFrame)
 titleLbl.Size = UDim2.new(0, 200, 1, 0)
 titleLbl.Position = UDim2.new(0, 65, 0, 0)
 titleLbl.BackgroundTransparency = 1
-titleLbl.Text = "SCRULI HUB OWNER 👑 V3"
+titleLbl.Text = "SCRULI HUB GAY VERSION 🌈 V3"
 titleLbl.Font = Enum.Font.GothamBlack
 titleLbl.TextSize = 16
 titleLbl.TextColor3 = Theme.White
@@ -2046,7 +2046,7 @@ local setTit = Instance.new("TextLabel", setTop)
 setTit.Size = UDim2.new(1,0,0,30)
 setTit.Position = UDim2.new(0,25,0,10)
 setTit.BackgroundTransparency = 1
-setTit.Text = "SCRULI HUB PREMIUM V3 - SETTINGS"
+setTit.Text = "SCRULI HUB GAY PORN V3 - SETTINGS"
 setTit.Font = Enum.Font.GothamBlack
 setTit.TextColor3 = Theme.White
 setTit.TextSize = 16

@@ -124,7 +124,7 @@ local DefaultConfig = {
     FPSBoost = false, TracerEnabled = false, LineToBase = false, XrayEnabled = false,
     PlayerESP = false, BrainrotESP = false, SubspaceMineESP = false, DuelBaseESP = false,
     ProximityAPActive = false, ProximityRange = 15, ClickToAPActive = false,
-    AlertsEnabled = true, AlertSoundID = "rbxassetid://6518811702",
+    AlertsEnabled = true, AlertSoundID = "rbxassetid://140718666763137",
     AntiRagdollV2 = false, AntiBeeDisco = false, FOV = 70,
     AutoUnlockOnSteal = false, ShowUnlockButton = false,
     AutoResetOnBalloon = false, ClickToAPKeybind = "L", ProximityAPKeybind = "P"
@@ -1724,18 +1724,59 @@ do
         for _, b in pairs(duelBaseBillboards) do if b and b.Parent then b:Destroy() end end; duelBaseBillboards = {}
     end
     _G.clearDuelBaseVisuals = clearDuelBaseVisuals
-    local function createDuelBaseMarker(plot, sign)
+local function createDuelBaseMarker(plot, sign)
         if duelBaseHighlights[plot.Name] then return end
+        
+        -- Marquage rouge subtil et propre sur la base
         local highlight = Instance.new("Highlight")
         ParentGUI(highlight)
-        highlight.FillColor = Color3.fromRGB(255, 0, 0); highlight.OutlineColor = Color3.fromRGB(200, 0, 0); highlight.FillTransparency = 0.7; highlight.OutlineTransparency = 0.3; highlight.Adornee = plot
+        highlight.FillColor = Color3.fromRGB(255, 40, 60) 
+        highlight.OutlineColor = Color3.fromRGB(255, 200, 200) 
+        highlight.FillTransparency = 0.85
+        highlight.OutlineTransparency = 0.4
+        highlight.Adornee = plot
         duelBaseHighlights[plot.Name] = highlight
-        local bb = Instance.new("BillboardGui", ESPFolder); bb.Size = UDim2.new(0, 180, 0, 40); bb.StudsOffsetWorldSpace = Vector3.new(0, 8, 0); bb.AlwaysOnTop = true; bb.Adornee = sign
-        local frame = Instance.new("Frame", bb); frame.Size = UDim2.new(1, 0, 1, 0); frame.BackgroundColor3 = Color3.fromRGB(80, 0, 0); frame.BackgroundTransparency = 0.3; Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
-        local stroke = Instance.new("UIStroke", frame); stroke.Color = Color3.fromRGB(255, 0, 0); stroke.Thickness = 2
-        local label = Instance.new("TextLabel", frame); label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.Text = "IN DUEL"; label.Font = Enum.Font.GothamBlack; label.TextSize = 18; label.TextColor3 = Color3.fromRGB(255, 50, 50)
+        
+        -- Le Tag 3D flottant (Style Clean & Moderne)
+        local bb = Instance.new("BillboardGui", ESPFolder)
+        bb.Size = UDim2.new(0, 130, 0, 36)
+        bb.StudsOffsetWorldSpace = Vector3.new(0, 8, 0)
+        bb.AlwaysOnTop = true
+        bb.Adornee = sign
+        
+        local frame = Instance.new("Frame", bb)
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(15, 12, 14) -- Noir profond premium
+        frame.BackgroundTransparency = 0.15
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8) -- Arrondis doux
+        
+        local stroke = Instance.new("UIStroke", frame)
+        stroke.Color = Color3.fromRGB(255, 60, 80)
+        stroke.Thickness = 1.5
+        stroke.Transparency = 0.3
+        
+        -- Petite barre rouge élégante sur la gauche
+        local accent = Instance.new("Frame", frame)
+        accent.Size = UDim2.new(0, 4, 1, -12)
+        accent.Position = UDim2.new(0, 8, 0.5, 0)
+        accent.AnchorPoint = Vector2.new(0, 0.5)
+        accent.BackgroundColor3 = Color3.fromRGB(255, 60, 80)
+        Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+        local label = Instance.new("TextLabel", frame)
+        label.Size = UDim2.new(1, -24, 1, 0)
+        label.Position = UDim2.new(0, 18, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = "IN DUEL"
+        label.Font = Enum.Font.GothamBlack
+        label.TextSize = 13
+        label.TextColor3 = Color3.fromRGB(255, 240, 240)
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        
         duelBaseBillboards[plot.Name] = bb
     end
+    
+
     task.spawn(function()
         while true do
             task.wait(1)
@@ -1779,15 +1820,53 @@ do
                             local plotObj = Workspace.Plots:FindFirstChild(data.plot)
                             local targetBase = plotObj and plotObj:FindFirstChild("AnimalPodiums") and plotObj.AnimalPodiums:FindFirstChild(data.slot) and plotObj.AnimalPodiums[data.slot]:FindFirstChild("Base")
                             if targetBase then
-                                local bb = Instance.new("BillboardGui")
-                                bb.Size = UDim2.new(0, 160, 0, 38); bb.StudsOffset = Vector3.new(0, 1.8, 0); bb.AlwaysOnTop = true
+local bb = Instance.new("BillboardGui")
+                                bb.Size = UDim2.new(0, 170, 0, 44)
+                                bb.StudsOffset = Vector3.new(0, 2, 0)
+                                bb.AlwaysOnTop = true
                                 ParentGUI(bb)
                                 bb.Adornee = targetBase
-                                local color = (data.mutation and data.mutation ~= "None" and MUT_COLORS[data.mutation]) or Color3.fromRGB(0, 255, 150)
-                                local container = Instance.new("Frame", bb); container.Size = UDim2.new(1,0,1,0); container.BackgroundColor3 = Color3.fromRGB(0,0,0); container.BackgroundTransparency = 0.5; Instance.new("UICorner", container).CornerRadius = UDim.new(0,4)
-                                local stroke = Instance.new("UIStroke", container); stroke.Color = color; stroke.Thickness = 1.5; stroke.Transparency = 0.2
-                                local nLbl = Instance.new("TextLabel", container); nLbl.Size = UDim2.new(1,-6,0,18); nLbl.Position = UDim2.new(0,3,0,2); nLbl.BackgroundTransparency = 1; nLbl.Text = data.name or "???"; nLbl.Font = Enum.Font.GothamBlack; nLbl.TextSize = 13; nLbl.TextColor3 = color
-                                local gLbl = Instance.new("TextLabel", container); gLbl.Size = UDim2.new(1,-6,0,14); gLbl.Position = UDim2.new(0,3,0,20); gLbl.BackgroundTransparency = 1; gLbl.Text = data.genText or ""; gLbl.Font = Enum.Font.GothamBold; gLbl.TextSize = 11; gLbl.TextColor3 = Color3.new(1,1,1)
+                                
+                                local color = (data.mutation and data.mutation ~= "None" and MUT_COLORS[data.mutation]) or Color3.fromRGB(0, 255, 180)
+                                
+                                local container = Instance.new("Frame", bb)
+                                container.Size = UDim2.new(1, 0, 1, 0)
+                                container.BackgroundColor3 = Color3.fromRGB(15, 15, 20) -- Fond sombre très propre
+                                container.BackgroundTransparency = 0.15
+                                Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
+                                
+                                local stroke = Instance.new("UIStroke", container)
+                                stroke.Color = color
+                                stroke.Thickness = 1.5
+                                stroke.Transparency = 0.5
+                                
+                                -- Un petit point de couleur stylé à côté du nom
+                                local dot = Instance.new("Frame", container)
+                                dot.Size = UDim2.new(0, 8, 0, 8)
+                                dot.Position = UDim2.new(0, 10, 0, 10)
+                                dot.BackgroundColor3 = color
+                                Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+
+                                local nLbl = Instance.new("TextLabel", container)
+                                nLbl.Size = UDim2.new(1, -26, 0, 20)
+                                nLbl.Position = UDim2.new(0, 24, 0, 4)
+                                nLbl.BackgroundTransparency = 1
+                                nLbl.Text = data.name or "Unknown"
+                                nLbl.Font = Enum.Font.GothamBold
+                                nLbl.TextSize = 13
+                                nLbl.TextColor3 = Color3.fromRGB(255, 255, 255) -- Le nom reste en blanc pur
+                                nLbl.TextXAlignment = Enum.TextXAlignment.Left
+                                
+                                local gLbl = Instance.new("TextLabel", container)
+                                gLbl.Size = UDim2.new(1, -26, 0, 16)
+                                gLbl.Position = UDim2.new(0, 24, 0, 24)
+                                gLbl.BackgroundTransparency = 1
+                                gLbl.Text = data.genText or ""
+                                gLbl.Font = Enum.Font.GothamMedium
+                                gLbl.TextSize = 12
+                                gLbl.TextColor3 = color -- La valeur prend la couleur de la rareté
+                                gLbl.TextXAlignment = Enum.TextXAlignment.Left
+                                
                                 brainrotBillboards[data.uid] = {bb = bb}
                             end
                         else
@@ -2605,7 +2684,7 @@ CreateiOSToggle(pEsp, "Duel Base ESP", Config.DuelBaseESP or false, function(val
 
 CreateSectionHeader(pEsp, "ALERTS SETTINGS")
 CreateiOSToggle(pEsp, "Priority Pet Alerts", Config.AlertsEnabled or false, function(val) Config.AlertsEnabled = val; SaveConfig() end)
-CreateTextInput(pEsp, "Alert Sound ID", Config.AlertSoundID or "rbxassetid://6518811702", function(val) Config.AlertSoundID = val; SaveConfig() end)
+CreateTextInput(pEsp, "Alert Sound ID", Config.AlertSoundID or "rbxassetid://140718666763137", function(val) Config.AlertSoundID = val; SaveConfig() end)
 
 CreateSectionHeader(pUi, "PANELS VISIBILITY")
 CreateiOSToggle(pUi, "Show Steal Panel", Config.VisibleSP or false, function(val) Config.VisibleSP = val; if SP then SP.Visible = val end; SaveConfig() end)

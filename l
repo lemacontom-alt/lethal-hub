@@ -1,7 +1,7 @@
 -- ==========================================================
 -- 🔥 SCRULI HUB AMBER V69 (ESP, ADMIN, 3D FRONT & MISC) 🔥
 -- ==========================================================
-if not game:IsLoaded() then
+if not game:IsLoaded() then 
     game.Loaded:Wait() 
 end
 
@@ -743,15 +743,20 @@ _G.ANTI_BEE_DISCO = {
         local RunService = game:GetService("RunService")
         local Lighting = game:GetService("Lighting")
         local LocalPlayer = game:GetService("Players").LocalPlayer
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
         local function purge(obj)
+            -- 🛡️ LA CORRECTION EST ICI : On ignore totalement les armes/outils !
+            -- Si l'objet est un "Tool" (dans ton inventaire ou ta main), on ne le détruit PAS.
+            if obj:IsA("Tool") or (obj.Parent and obj.Parent:IsA("Tool")) then 
+                return 
+            end
+
             local n = obj.Name:lower()
-            -- Destruction des objets trolls et secousses
+            -- Destruction des effets trolls (mais pas des objets de ton inventaire)
             if n:match("bee") or n:match("disco") or n:match("boogie") or n:match("shake") then
                 pcall(function() obj:Destroy() end)
             end
-            -- Destruction des musiques de troll
+            -- Destruction des musiques
             if obj:IsA("Sound") and (n:match("disco") or n:match("music") or n:match("party") or n:match("bee") or n:match("boogie")) then
                 pcall(function() obj:Stop(); obj:Destroy() end)
             end
@@ -760,31 +765,9 @@ _G.ANTI_BEE_DISCO = {
         -- Nettoyage initial sur la map
         for _, v in ipairs(workspace:GetDescendants()) do purge(v) end
 
-        -- Boucle de protection Ultime (Anti-Tout)
+        -- Boucle de protection Ultime (Anti-Tout, mais respecte ton inventaire)
         _G.AntiBeeLoopConn = RunService.RenderStepped:Connect(function()
             
-            -- 1. DESTRUCTION TOTALE DU ITEM CONTROLLER (Boogie Bomb)
-            pcall(function()
-                local controllers = ReplicatedStorage:FindFirstChild("Controllers")
-                if controllers then
-                    local itemController = controllers:FindFirstChild("ItemController")
-                    if itemController then
-                        itemController:Destroy()
-                    end
-                end
-            end)
-
-            -- 2. NETTOYAGE DES SCRIPTS CACHÉS
-            local pScripts = LocalPlayer:FindFirstChild("PlayerScripts")
-            if pScripts then
-                for _, v in ipairs(pScripts:GetChildren()) do
-                    local n = v.Name:lower()
-                    if n:match("boogie") or n:match("disco") or n:match("bee") or n:match("shake") then
-                        pcall(function() v:Destroy() end)
-                    end
-                end
-            end
-
             -- 3. PROTECTION DU PERSONNAGE
             local char = LocalPlayer.Character
             if char then
@@ -822,7 +805,7 @@ _G.ANTI_BEE_DISCO = {
                         end
                     end
 
-                    -- Anti-Danse (Bloque l'emote)
+                    -- Anti-Danse (Bloque l'emote de la bombe que tu subis)
                     local animator = hum:FindFirstChildOfClass("Animator")
                     if animator then
                         for _, track in ipairs(animator:GetPlayingAnimationTracks()) do

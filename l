@@ -1958,6 +1958,147 @@ local bb = Instance.new("BillboardGui")
     end)
 end
 
+-- ==========================================
+    -- 🚨 STEAL RADAR ESP (INTEGRATED & ANTI-CRASH)
+    -- ==========================================
+    local stealRadarCache = {}
+    local activeStealESPs = {}
+
+    local function getClosestPetName(plr)
+        if stealRadarCache[plr.UserId] then return stealRadarCache[plr.UserId] end
+        local char = plr.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return "Unknown Pet" end
+
+        local bestDist = 20
+        local foundName = "A Brainrot"
+        pcall(function()
+            for _, plot in ipairs(Workspace.Plots:GetChildren()) do
+                local ch = Synchronizer:Get(plot.Name)
+                if ch then
+                    local owner = ch:Get("Owner")
+                    if owner and owner.Name ~= plr.Name then 
+                        local al = ch:Get("AnimalList")
+                        if al then
+                            for slot, ad in pairs(al) do
+                                if type(ad) == "table" then
+                                    local base = plot.AnimalPodiums:FindFirstChild(tostring(slot)) and plot.AnimalPodiums[tostring(slot)]:FindFirstChild("Base")
+                                    local targetPart = base and (base:FindFirstChild("Spawn") or base)
+                                    if targetPart then
+                                        local dist = (hrp.Position - targetPart.Position).Magnitude
+                                        if dist < bestDist then
+                                            bestDist = dist
+                                            local mut = (ad.Mutation and ad.Mutation ~= "None") and ("["..ad.Mutation.."] ") or ""
+                                            local name = ad.Index or "Brainrot"
+                                            foundName = mut .. name
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        stealRadarCache[plr.UserId] = foundName
+        return foundName
+    end
+
+    local function clearStealRadarESP()
+        for _, esp in pairs(activeStealESPs) do
+            if esp.Billboard then esp.Billboard:Destroy() end
+        end
+        activeStealESPs = {}
+        stealRadarCache = {}
+    end
+    _G.clearStealRadarESP = clearStealRadarESP
+
+    task.spawn(function()
+        while task.wait(0.2) do
+            if Config.StealRadarESP then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr == LocalPlayer then continue end 
+                    
+                    local char = plr.Character
+                    if not char then continue end
+
+                    local isStealing = plr:GetAttribute("Stealing")
+
+                    if isStealing == true then
+                        local targetPetName = getClosestPetName(plr)
+
+                        if not activeStealESPs[plr.UserId] then
+                            local head = char:FindFirstChild("Head") or char.PrimaryPart
+                            if not head then continue end
+
+                            local bb = Instance.new("BillboardGui")
+                            bb.Size = UDim2.new(0, 190, 0, 48)
+                            bb.StudsOffset = Vector3.new(0, 3.5, 0)
+                            bb.AlwaysOnTop = true
+                            bb.Adornee = head
+                            ParentGUI(bb)
+                            
+                            local color = Color3.fromRGB(255, 40, 60)
+                            
+                            local container = Instance.new("Frame", bb)
+                            container.Size = UDim2.new(1, 0, 1, 0)
+                            container.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+                            container.BackgroundTransparency = 0.15
+                            Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
+                            
+                            local stroke = Instance.new("UIStroke", container)
+                            stroke.Color = color
+                            stroke.Thickness = 1.5
+                            stroke.Transparency = 0.5
+                            
+                            local dot = Instance.new("Frame", container)
+                            dot.Size = UDim2.new(0, 8, 0, 8)
+                            dot.Position = UDim2.new(0, 10, 0, 12)
+                            dot.BackgroundColor3 = color
+                            Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+
+                            local nLbl = Instance.new("TextLabel", container)
+                            nLbl.Size = UDim2.new(1, -26, 0, 20)
+                            nLbl.Position = UDim2.new(0, 24, 0, 4)
+                            nLbl.BackgroundTransparency = 1
+                            nLbl.Text = plr.Name .. " IS STEALING:"
+                            nLbl.Font = Enum.Font.GothamBold
+                            nLbl.TextSize = 12
+                            nLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+                            nLbl.TextXAlignment = Enum.TextXAlignment.Left
+                            
+                            local gLbl = Instance.new("TextLabel", container)
+                            gLbl.Size = UDim2.new(1, -26, 0, 18)
+                            gLbl.Position = UDim2.new(0, 24, 0, 24)
+                            gLbl.BackgroundTransparency = 1
+                            gLbl.Text = targetPetName
+                            gLbl.Font = Enum.Font.GothamBlack
+                            gLbl.TextSize = 13
+                            gLbl.TextColor3 = color 
+                            gLbl.TextXAlignment = Enum.TextXAlignment.Left
+                            gLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+                            activeStealESPs[plr.UserId] = {Billboard = bb, PetLabel = gLbl, lastSeen = tick()}
+                        else
+                            activeStealESPs[plr.UserId].lastSeen = tick()
+                            if activeStealESPs[plr.UserId].PetLabel then
+                                activeStealESPs[plr.UserId].PetLabel.Text = targetPetName
+                            end
+                        end
+                    else
+                        if activeStealESPs[plr.UserId] and (tick() - activeStealESPs[plr.UserId].lastSeen > 1.5) then
+                            pcall(function() activeStealESPs[plr.UserId].Billboard:Destroy() end)
+                            activeStealESPs[plr.UserId] = nil
+                            stealRadarCache[plr.UserId] = nil
+                        end
+                    end
+                end
+            else
+                pcall(clearStealRadarESP)
+            end
+        end
+    end)
+
 -- =========================================================
 -- 🎨 UI ENGINE (MAKING WINDOWS)
 -- =========================================================
@@ -2681,6 +2822,7 @@ CreateiOSToggle(pEsp, "Player ESP (Hides Names)", Config.PlayerESP or false, fun
 CreateiOSToggle(pEsp, "Brainrot ESP", Config.BrainrotESP or false, function(val) Config.BrainrotESP = val; if not val and _G.clearBrainrotESP then _G.clearBrainrotESP() end; SaveConfig() end)
 CreateiOSToggle(pEsp, "Subspace Mine Esp", Config.SubspaceMineESP or false, function(val) Config.SubspaceMineESP = val; if not val and _G.clearSubspaceMines then _G.clearSubspaceMines() end; SaveConfig() end)
 CreateiOSToggle(pEsp, "Duel Base ESP", Config.DuelBaseESP or false, function(val) Config.DuelBaseESP = val; if not val and _G.clearDuelBaseVisuals then _G.clearDuelBaseVisuals() end; SaveConfig() end)
+CreateiOSToggle(pEsp, "Steal Radar ESP", Config.StealRadarESP or false, function(val) Config.StealRadarESP = val; if not val and _G.clearStealRadarESP then _G.clearStealRadarESP() end; SaveConfig() end)
 
 CreateSectionHeader(pEsp, "ALERTS SETTINGS")
 CreateiOSToggle(pEsp, "Priority Pet Alerts", Config.AlertsEnabled or false, function(val) Config.AlertsEnabled = val; SaveConfig() end)
@@ -3984,17 +4126,19 @@ task.spawn(function()
         end
     end
 end)
--- =========================================================
--- 🦾 AUTO TP BACK TO BRAINROT (STANDALONE ENGINE)
--- =========================================================
 
+-- =========================================================
+-- 🦾 AUTO TP BACK TO BRAINROT (FIX PLATEFORME + AUTODESTRUCTION)
+-- =========================================================
 task.spawn(function()
     local Player = game:GetService("Players").LocalPlayer
 
     Player:GetAttributeChangedSignal("Stealing"):Connect(function()
         local isStealing = Player:GetAttribute("Stealing")
         
+        -- Si le vol s'arrête (fail, bump...)
         if not isStealing then
+            -- On vérifie que l'option est bien cochée dans TON menu Hub
             if not Config.AutoTpOnFailedSteal then return end
             if not SharedState.SelectedPetData then return end
             if State.isTpMoving then return end
@@ -4004,7 +4148,7 @@ task.spawn(function()
             if not hrp then return end
 
             task.spawn(function()
-                -- ⏳ LE CHANGEMENT EST ICI : On attend 1 seconde complète
+                -- ⏳ Attente de 1 seconde (sécurité)
                 task.wait(1) 
 
                 local plotObj = Workspace.Plots:FindFirstChild(SharedState.SelectedPetData.plot)
@@ -4014,21 +4158,70 @@ task.spawn(function()
                     local targetPart = base and (base:FindFirstChild("Spawn") or base)
 
                     if targetPart and hrp and hrp.Parent then
-                        -- TON CODE DE TP
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         
-                        if (hrp.Position - targetPart.Position).Magnitude < 150 then
-                            hrp.CFrame = CFrame.new(targetPart.Position)
-                        else
-                            if runAutoSnipe then pcall(runAutoSnipe) end
+                        -- Si on n'a toujours pas repris le vol manuellement
+                        if not Player:GetAttribute("Stealing") then
+                            
+                            -- Si on est assez proche pour le TP Back
+                            if (hrp.Position - targetPart.Position).Magnitude < 150 then
+                                
+                                local verticalDiff = targetPart.Position.Y - hrp.Position.Y
+                                
+                                if verticalDiff > 2 then
+                                    -- ☁️ 3ÈME ÉTAGE : Création de la plateforme (-8 mètres)
+                                    local airPos = Vector3.new(targetPart.Position.X, targetPart.Position.Y - 8, targetPart.Position.Z)
+                                    local plat = Instance.new("Part", Workspace)
+                                    plat.Size = Vector3.new(3, 1, 3)
+                                    plat.Position = airPos - Vector3.new(0, 5, 0)
+                                    plat.Anchored = true
+                                    plat.Transparency = 0.3
+                                    
+                                    for i = 1, 10 do 
+                                        if Player:GetAttribute("Stealing") then break end
+                                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                                        hrp.CFrame = CFrame.new(airPos)
+                                        task.wait(0.05) 
+                                    end
+                                    
+                                    -- 🪄 AUTODESTRUCTION : Dès que tu commences à voler, la plaque disparaît
+                                    task.spawn(function()
+                                        local maxWait = 10 
+                                        while maxWait > 0 do
+                                            if Player:GetAttribute("Stealing") == true then
+                                                break 
+                                            end
+                                            task.wait(0.1)
+                                            maxWait = maxWait - 0.1
+                                        end
+                                        if plat and plat.Parent then
+                                            plat:Destroy()
+                                        end
+                                    end)
+
+                                else
+                                    -- 🌿 SOL NORMAL : TP standard sans plateforme
+                                    for i = 1, 10 do 
+                                        if Player:GetAttribute("Stealing") then break end
+                                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                                        if (hrp.Position - targetPart.Position).Magnitude > 3 then
+                                            hrp.CFrame = CFrame.new(targetPart.Position)
+                                            task.wait(0.05) 
+                                        end 
+                                    end
+                                end
+
+                            else
+                                -- Trop loin : on relance un AutoSnipe complet pour repasser les portes
+                                if runAutoSnipe then pcall(runAutoSnipe) end
+                            end
                         end
+                        
                     end
                 end
             end)
         end
     end)
 end)
-
 -- =========================================================
 -- 🐉 SERVER POSITION VISUALIZER (DRAGON DE FEU RÉALISTE)
 -- =========================================================
@@ -4266,6 +4459,43 @@ task.spawn(function()
                 end
             end
         end)
+    end
+end)
+
+-- =========================================================
+-- 🗑️ ANTI-ITEM CONTROLLER (DELETE CONTINU)
+-- =========================================================
+task.spawn(function()
+    local Player = game:GetService("Players").LocalPlayer
+
+    local function destroyItemController()
+        pcall(function()
+            -- 1. On cherche dans les scripts cachés du joueur
+            local playerScripts = Player:FindFirstChild("PlayerScripts")
+            if playerScripts then
+                for _, obj in ipairs(playerScripts:GetDescendants()) do
+                    if obj.Name == "ItemController" then
+                        obj:Destroy()
+                    end
+                end
+            end
+            
+            -- 2. On cherche dans le personnage (au cas où il s'y attache)
+            local char = Player.Character
+            if char then
+                for _, obj in ipairs(char:GetDescendants()) do
+                    if obj.Name == "ItemController" then
+                        obj:Destroy()
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Boucle infinie qui le supprime toutes les 1 seconde
+    while true do
+        destroyItemController()
+        task.wait(1)
     end
 end)
 

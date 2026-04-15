@@ -188,6 +188,7 @@ local toggleDesyncFunc
 do
     local hooked = false
     local currentHook = nil
+    local CachetteSecurisee = nil -- Mémoire pour le Mobile
 
     toggleDesyncFunc = function(state)
         local raknet = getgenv and getgenv().raknet
@@ -201,19 +202,33 @@ do
         
         local UserInputService = game:GetService("UserInputService")
         local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+        local LocalPlayer = game:GetService("Players").LocalPlayer
+        
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
         
         if state then
-            if isMobile and raknet.desync ~= nil then
-                -- POUR MOBILE
-                pcall(function()
-                    if type(raknet.desync) == "function" then
-                        raknet.desync(true)
-                    else
-                        raknet.desync = true
-                    end
-                end)
+            if isMobile then
+                -- 🟢 POUR MOBILE : GHOST ANCHOR (FLUIDITÉ 100%)
+                if hrp and hum then
+                    CachetteSecurisee = hrp.CFrame
+                    hrp.Anchored = true
+                    task.wait(0.15)
+                    
+                    pcall(function()
+                        if type(raknet.desync) == "function" then
+                            raknet.desync(true)
+                        else
+                            raknet.desync = true
+                        end
+                    end)
+                    
+                    hrp.Anchored = false
+                    hum.WalkSpeed = 20 -- Speed Boost !
+                end
             else
-                -- POUR PC (FONCTION VXNTA PURE)
+                -- 🟢 POUR PC : FONCTION VXNTA PURE
                 if not currentHook then
                     pcall(function()
                         currentHook = raknet.add_send_hook(function(packet)
@@ -227,17 +242,30 @@ do
                 end
             end
         else
-            if isMobile and raknet.desync ~= nil then
-                -- POUR MOBILE
-                pcall(function()
-                    if type(raknet.desync) == "function" then
-                        raknet.desync(false)
-                    else
-                        raknet.desync = false
+            if isMobile then
+                -- 🔴 POUR MOBILE : RETOUR SÉCURISÉ (ZERO LAGBACK)
+                if hrp and hum then
+                    hum.WalkSpeed = 16
+                    hrp.Anchored = true
+                    
+                    if CachetteSecurisee then
+                        hrp.CFrame = CachetteSecurisee
                     end
-                end)
+                    task.wait(0.1)
+                    
+                    pcall(function()
+                        if type(raknet.desync) == "function" then
+                            raknet.desync(false)
+                        else
+                            raknet.desync = false
+                        end
+                    end)
+                    
+                    task.wait(0.1)
+                    hrp.Anchored = false
+                end
             else
-                -- POUR PC (DÉSACTIVATION)
+                -- 🔴 POUR PC : DÉSACTIVATION VXNTA
                 if currentHook then
                     pcall(function() raknet.remove_send_hook(currentHook) end)
                     currentHook = nil

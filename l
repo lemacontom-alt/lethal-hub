@@ -1886,11 +1886,11 @@ if Config.TpSettings and Config.TpSettings.TpOnLoad then
 
     if hrp and hum then
         -- Laisse 3 secondes au Scheduler pour scanner la map
-        task.wait(3)
+        task.wait(0.3)
 
         local waitLimit = 0
         while not SharedState.SelectedPetData and waitLimit < 20 do
-            task.wait(0.2)
+            task.wait(0.1)
             waitLimit = waitLimit + 1
         end
 

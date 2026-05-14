@@ -203,7 +203,7 @@ FarmTab:CreateToggle({
 })
 
 
-PlayerTab:CreateSection("Capacités de Combat")
+PlayerTab:CreateSection("speed")
 
 PlayerTab:CreateToggle({
     Name = "BOOST (q keybind)",

@@ -419,7 +419,7 @@ TrollTab:CreateToggle({
 })
 
 TrollTab:CreateToggle({
-    Name = "Annoy )",
+    Name = "Annoy ",
     CurrentValue = false,
     Flag = "ToggleAnnoy",
     Callback = function(Value)

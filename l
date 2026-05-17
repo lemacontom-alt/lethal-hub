@@ -560,7 +560,7 @@ end
 
 
 local CorrectKey = "SCRULI67" 
-local DiscordLink = "https://discord.gg/bFJmhqcUXG" 
+local DiscordLink = "https://discord.gg/YYrAk3sNDz" 
 
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
